@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".ui.fragment.LiveStreamFragment">
+
+        <!-- TODO: Update blank fragment layout -->
+        <com.home.camera.ui.customView.CameraView
+            android:id="@+id/camera_view"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            app:layout_constraintDimensionRatio="16:12.5"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/live_dot"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginEnd="8dp"
+            android:src="@drawable/live_dot"
+            app:layout_constraintBottom_toBottomOf="@id/live_text"
+            app:layout_constraintEnd_toStartOf="@id/live_text"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintTop_toTopOf="@id/live_text" />
+
+        <TextView
+            android:id="@+id/live_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="16dp"
+            android:includeFontPadding="false"
+            android:text="LIVE"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintTop_toBottomOf="@id/camera_view" />
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:indeterminateTint="#eeeeee"
+            android:shadowColor="@color/white"
+            app:layout_constraintBottom_toBottomOf="@id/camera_view"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/camera_view" />
+
+        <View
+            android:id="@+id/camera_round"
+            android:layout_width="88dp"
+            android:layout_height="88dp"
+            android:layout_marginTop="48dp"
+            android:layout_marginEnd="24dp"
+            android:background="@drawable/bg_round_stroke"
+            app:layout_constraintEnd_toStartOf="@id/refresh_round"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/camera_view" />
+
+        <ImageView
+            android:id="@+id/camera_icon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@drawable/ic_baseline_linked_camera_24"
+            app:layout_constraintBottom_toBottomOf="@id/camera_round"
+            app:layout_constraintEnd_toEndOf="@id/camera_round"
+            app:layout_constraintStart_toStartOf="@id/camera_round"
+            app:layout_constraintTop_toTopOf="@id/camera_round" />
+
+        <View
+            android:id="@+id/refresh_round"
+            android:layout_width="88dp"
+            android:layout_height="88dp"
+            android:layout_marginStart="24dp"
+            android:layout_marginTop="48dp"
+            android:background="@drawable/bg_round_stroke"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintStart_toEndOf="@id/camera_round"
+            app:layout_constraintTop_toBottomOf="@id/camera_view" />
+
+        <ImageView
+            android:id="@+id/refresh_icon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@drawable/ic_baseline_refresh_24"
+            app:layout_constraintBottom_toBottomOf="@id/refresh_round"
+            app:layout_constraintEnd_toEndOf="@id/refresh_round"
+            app:layout_constraintStart_toStartOf="@id/refresh_round"
+            app:layout_constraintTop_toTopOf="@id/refresh_round" />
+
+        <androidx.constraintlayout.widget.Group
+            android:id="@+id/connected_icons"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:constraint_referenced_ids="camera_icon, camera_round, refresh_icon, refresh_round, live_dot, live_text" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>
