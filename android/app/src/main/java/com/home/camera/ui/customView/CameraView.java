@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
@@ -33,18 +34,21 @@ public class CameraView extends SurfaceView {
         surfaceHolder = getHolder();
     }
 
-    public void renderData(byte[] imageArray) {
+    public void renderFrame(byte[] imageArray) {
         Bitmap decodeBitmap = BitmapFactory.decodeByteArray(imageArray, 0, imageArray.length);
+        Log.d(TAG, "renderFrame: " + decodeBitmap);
+        if (decodeBitmap != null) {
         /*int width = getWidth();
         int height = getHeight();*/
-        Matrix matrix = new Matrix();
-        matrix.postRotate(90);
-        Bitmap bitmap = Bitmap.createBitmap(decodeBitmap, 0, 0, decodeBitmap.getWidth(), decodeBitmap.getHeight(), matrix, true);
-        //Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, width, height, false);
-        Canvas canvas = surfaceHolder.lockCanvas();
-        if (canvas != null) {
-            canvas.drawBitmap(bitmap, 0, 0, null);
-            surfaceHolder.unlockCanvasAndPost(canvas);
+            Matrix matrix = new Matrix();
+            matrix.postRotate(90);
+            Bitmap bitmap = Bitmap.createBitmap(decodeBitmap, 0, 0, decodeBitmap.getWidth(), decodeBitmap.getHeight(), matrix, true);
+            //Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, width, height, false);
+            Canvas canvas = surfaceHolder.lockCanvas();
+            if (canvas != null) {
+                canvas.drawBitmap(bitmap, 0, 0, null);
+                surfaceHolder.unlockCanvasAndPost(canvas);
+            }
         }
     }
 

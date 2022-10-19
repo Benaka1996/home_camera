@@ -26,22 +26,26 @@ public class LiveStreamFragment extends Fragment {
     private WebSocketViewModel webSocketViewModel;
 
     private final Observer<SocketData> webSocketObserver = socketData -> {
-        int status = socketData.getStatus();
-        if (status == AppConstant.SOCKET_STATE) {
-            boolean state = (boolean) socketData.getData();
-            if (state)
-                webSocketViewModel.sendState(AppConstant.LIVE_STREAM);
-        } else if (status == AppConstant.SUCCESS) {
-            binding.progressBar.setVisibility(View.GONE);
-            binding.connectedIcons.setVisibility(View.VISIBLE);
-            if (socketData.getData() instanceof ByteBuffer) {
-                ByteBuffer byteBuffer = (ByteBuffer) socketData.getData();
-                byte[] imageArray = byteBuffer.array();
-                binding.cameraView.renderData(imageArray);
+        if (webSocketViewModel.isSocketConnected()) {
+            int status = socketData.getStatus();
+            if (status == AppConstant.SUCCESS) {
+                binding.progressBar.setVisibility(View.GONE);
+                binding.connectedIcons.setVisibility(View.VISIBLE);
+                if (socketData.getData() instanceof ByteBuffer) {
+                    ByteBuffer byteBuffer = (ByteBuffer) socketData.getData();
+                    byte[] imageArray = byteBuffer.array();
+                    binding.cameraView.renderFrame(imageArray);
+                }
+            } else {
+                binding.progressBar.setVisibility(View.VISIBLE);
+                binding.connectedIcons.setVisibility(View.GONE);
             }
-        } else {
-            binding.progressBar.setVisibility(View.VISIBLE);
-            binding.connectedIcons.setVisibility(View.GONE);
+        }
+    };
+
+    private final Observer<Boolean> connectionStateObserver = isConnected -> {
+        if (isConnected) {
+            webSocketViewModel.sentText(AppConstant.LIVE_STREAM);
         }
     };
 
@@ -61,13 +65,21 @@ public class LiveStreamFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        webSocketViewModel.updateConnectionState();
         webSocketViewModel.getSocketLiveData().observe(getViewLifecycleOwner(), webSocketObserver);
+        webSocketViewModel.getConnectionStatusLiveData().observe(getViewLifecycleOwner(), connectionStateObserver);
+
+        binding.cameraRound.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                webSocketViewModel.sentText(AppConstant.CAPTURE_IMAGE);
+            }
+        });
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         webSocketViewModel.getSocketLiveData().removeObserver(webSocketObserver);
+        webSocketViewModel.getConnectionStatusLiveData().removeObserver(connectionStateObserver);
     }
 }

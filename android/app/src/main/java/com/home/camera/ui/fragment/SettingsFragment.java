@@ -23,14 +23,16 @@ public class SettingsFragment extends Fragment {
 
     private final Observer<SocketData> webSocketObserver = socketData -> {
         int status = socketData.getStatus();
-        if (status == AppConstant.SOCKET_STATE) {
-            boolean state = (boolean) socketData.getData();
-            if (state)
-                webSocketViewModel.sendState(AppConstant.SETTINGS);
-        } else if (status == AppConstant.SUCCESS) {
+        if (status == AppConstant.SUCCESS) {
 
         } else {
 
+        }
+    };
+
+    private final Observer<Boolean> connectionStateObserver = (Observer<Boolean>) isConnected -> {
+        if (isConnected) {
+            webSocketViewModel.sentText(AppConstant.SETTINGS);
         }
     };
 
@@ -50,13 +52,14 @@ public class SettingsFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        webSocketViewModel.updateConnectionState();
         webSocketViewModel.getSocketLiveData().observe(getViewLifecycleOwner(), webSocketObserver);
+        webSocketViewModel.getConnectionStatusLiveData().observe(getViewLifecycleOwner(), connectionStateObserver);
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         webSocketViewModel.getSocketLiveData().removeObserver(webSocketObserver);
+        webSocketViewModel.getConnectionStatusLiveData().removeObserver(connectionStateObserver);
     }
 }

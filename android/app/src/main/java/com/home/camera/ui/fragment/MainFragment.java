@@ -44,6 +44,8 @@ public class MainFragment extends Fragment {
             }
             if (item.getItemId() == R.id.live_stream_id) {
                 setFragment(new LiveStreamFragment(), LiveStreamFragment.TAG);
+            } else if (item.getItemId() == R.id.gallery_id) {
+                setFragment(new GalleryFragment(), GalleryFragment.TAG);
             } else if (item.getItemId() == R.id.sd_storage_id) {
                 setFragment(new StorageFragment(), StorageFragment.TAG);
             } else if (item.getItemId() == R.id.settings_id) {

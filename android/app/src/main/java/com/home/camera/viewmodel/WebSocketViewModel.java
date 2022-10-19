@@ -22,35 +22,42 @@ public class WebSocketViewModel extends AndroidViewModel {
     private static final String TAG = "WebSocketViewModel";
 
     private final MutableLiveData<SocketData> socketDataMutableLiveData = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> connectionStatusLiveData = new MutableLiveData<>();
 
     private WebSocketClient webSocketClient;
 
     public WebSocketViewModel(@NonNull Application application) {
         super(application);
-        init();
+        connect();
     }
 
     public LiveData<SocketData> getSocketLiveData() {
         return socketDataMutableLiveData;
     }
 
-    private void init() {
+    public LiveData<Boolean> getConnectionStatusLiveData() {
+        return connectionStatusLiveData;
+    }
+
+    public void connect() {
         try {
-            URI uri = new URI("ws://192.168.0.102:81");
+            URI uri = new URI("ws://192.168.0.180:81");
             webSocketClient = new WebSocketClient(uri) {
                 @Override
                 public void onOpen(ServerHandshake handshakeData) {
                     Log.d(TAG, "onOpen: ");
-                    socketDataMutableLiveData.postValue(new SocketData(AppConstant.SOCKET_STATE, true));
+                    connectionStatusLiveData.postValue(true);
                 }
 
                 @Override
                 public void onMessage(String message) {
+                    Log.d(TAG, "onMessage: " + message);
                     socketDataMutableLiveData.postValue(new SocketData(AppConstant.SUCCESS, message));
                 }
 
                 @Override
                 public void onMessage(ByteBuffer bytes) {
+                    Log.d(TAG, "onMessage: bytes");
                     socketDataMutableLiveData.postValue(new SocketData(AppConstant.SUCCESS, bytes));
                     super.onMessage(bytes);
                 }
@@ -58,12 +65,12 @@ public class WebSocketViewModel extends AndroidViewModel {
                 @Override
                 public void onClose(int code, String reason, boolean remote) {
                     Log.d(TAG, "onClose: " + reason);
-                    socketDataMutableLiveData.postValue(new SocketData(AppConstant.SOCKET_STATE, false));
+                    connectionStatusLiveData.postValue(false);
                 }
 
                 @Override
                 public void onError(Exception ex) {
-                    socketDataMutableLiveData.postValue(new SocketData(AppConstant.ERROR, null));
+                    connectionStatusLiveData.postValue(false);
                     Log.d(TAG, "onError: " + ex);
                 }
             };
@@ -74,17 +81,25 @@ public class WebSocketViewModel extends AndroidViewModel {
         }
     }
 
-    public void updateConnectionState() {
-        socketDataMutableLiveData.setValue(new SocketData(AppConstant.SOCKET_STATE, webSocketClient.isOpen()));
+    public void sentText(String state) {
+        webSocketClient.send(state);
     }
 
-    public void sendState(String state) {
-        webSocketClient.send(state);
+    public boolean isSocketConnected() {
+        return webSocketClient.isOpen();
+    }
+
+    public void disconnect() {
+        webSocketClient.close();
+    }
+
+    public void disconnectWithBlock() throws InterruptedException {
+        webSocketClient.closeBlocking();
     }
 
     @Override
     protected void onCleared() {
         super.onCleared();
-        webSocketClient.close();
+        disconnect();
     }
 }

@@ -7,6 +7,12 @@
         android:title="Live" />
 
     <item
+        android:id="@+id/gallery_id"
+        android:enabled="true"
+        android:icon="@drawable/ic_gallery"
+        android:title="Gallery" />
+
+    <item
         android:id="@+id/sd_storage_id"
         android:enabled="true"
         android:icon="@drawable/ic_sd_storage_24"
@@ -17,4 +23,5 @@
         android:enabled="true"
         android:icon="@drawable/ic_settings_24"
         android:title="Settings" />
+
 </menu>

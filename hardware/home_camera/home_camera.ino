@@ -6,6 +6,10 @@
 #include <SD_MMC.h>
 #include <EEPROM.h>
 
+#include <soc/soc.h>
+#include <soc/rtc_cntl_reg.h>
+#include <driver/rtc_io.h>
+
 #define EEPROM_SIZE 1
 
 #define PWDN_GPIO_NUM 32
@@ -31,14 +35,28 @@ WebSocketsServer webSocket(81);
 const char *ssid = "UmmmAde";
 const char *password = "20120527385";
 
-const int live_stream = 51;
-const int sd_storage = 52;
-const int settings = 53;
+const char *live_stream = "3";
+const char *sd_storage = "4";
+const char *settings = "5";
+const char *capture = "6";
+const char *openImage = "7";
 
-int screen_state = 0;
+String screen_state = "0";
 
 bool isConnected = false;
+bool sdCardConnected = false;
 uint8_t clientId = 0;
+
+String storage = "";
+
+int pitchureNo = 0;
+
+IPAddress local_IP(192, 168, 0, 180);
+IPAddress geteway(192, 168, 0, 1);
+IPAddress subnet(255, 255, 0, 0);
+
+IPAddress primaryDNS(8, 8, 8, 8);
+IPAddress secondaryDNS(8, 8, 4, 4);
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
   switch (type) {
@@ -54,18 +72,25 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
         Serial.println("Disconnected");
         isConnected = false;
         clientId = num;
-        screen_state = 0;
+        screen_state = "0";
         break;
       }
     case WStype_TEXT:
       {
-        Serial.println("Received");
-        int temp_value = (int)payload[0];
-        if (temp_value == live_stream || temp_value == sd_storage || temp_value == settings) {
+        String temp_value = (char *)payload;
+        Serial.println("Received " + String(temp_value));
+        if (temp_value == live_stream || temp_value == settings) {
           screen_state = temp_value;
+        } else if (temp_value == sd_storage) {
+          screen_state = temp_value;
+          fetchStorageInfo();
         } else {
+          if (temp_value == capture) {
+            captureImage();
+          } else if (strstr(temp_value.c_str(), String(openImage).c_str())) {
+            fetchImage((char *)payload);
+          }
         }
-        Serial.println(temp_value);
         break;
       }
   }
@@ -74,7 +99,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 void setup() {
   // put your setup code here, to run once:
 
-  //WRITE_PERI_REG(RTL_CNTL_BROWN_OUT_REG, 0) // To disable brownout detector
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  //disable brownout detector
 
   Serial.begin(115200);
 
@@ -111,10 +136,15 @@ void setup() {
     config.fb_count = 1;
   }
 
+  pinMode(4, OUTPUT);
+  digitalWrite(4, LOW);
+
   initWifi();
   if (!isWiFiConnected()) {
     return;
   }
+  mountSdCard();
+  EEPROM.begin(EEPROM_SIZE);
   initWebSocket();
 
   esp_err_t cameraState = esp_camera_init(&config);
@@ -123,7 +153,6 @@ void setup() {
     Serial.print(cameraState);
     return;
   }
-
   delay(1000);
 }
 
@@ -138,6 +167,11 @@ void sendImage() {
 }
 
 void initWifi() {
+
+  if (!WiFi.config(local_IP, geteway, subnet, primaryDNS, secondaryDNS)) {
+    Serial.println("Failure to configure WiFi");
+  }
+
   Serial.println("Connecting to " + String(ssid));
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -168,11 +202,112 @@ void initWebSocket() {
   webSocket.onEvent(webSocketEvent);
 }
 
+void mountSdCard() {
+  if (!SD_MMC.begin()) {
+    Serial.println("SD card mount failed");
+  }
+  uint8_t cardType = SD_MMC.cardType();
+  Serial.println("Card type " + String(cardType));
+  if (cardType != CARD_NONE) {
+    sdCardConnected = true;
+  }
+}
+
+void captureImage() {
+  if (sdCardConnected) {
+    Serial.println("Capturing image");
+    camera_fb_t *frameBuffer = NULL;
+    frameBuffer = esp_camera_fb_get();
+    if (!frameBuffer) {
+      Serial.println("Failed to capture");
+    }
+    pitchureNo = EEPROM.read(0) + 1;
+    String imagePath = "/image/image" + String(pitchureNo) + ".jpg";
+
+    fs::FS &fs = SD_MMC;
+
+    File file = fs.open(imagePath.c_str(), FILE_WRITE);
+    if (!file) {
+      Serial.println("Failed to open file");
+    } else {
+      file.write(frameBuffer->buf, frameBuffer->len);
+      EEPROM.write(0, pitchureNo);
+      EEPROM.commit();
+      Serial.println("Image has been captured");
+    }
+    file.close();
+
+    esp_camera_fb_return(frameBuffer);
+    // rtc_gpio_hold_en(GPIO_NUM_4);
+  }
+}
+
+void fetchImage(char *imagePathData) {
+  char *state = strtok(imagePathData, ",");
+  char *path = strtok(NULL, ",");
+  Serial.println("Fetch image" + String(state) + " " + String(path));
+  File file = SD_MMC.open(path, FILE_READ);
+  if (!file) {
+    Serial.println("Unable to open file/directory");
+    return;
+  }
+
+  webSocket.sendTXT(clientId, openImage);
+  uint8_t *fileBuffer;
+  unsigned int fileSize = file.size();
+  fileBuffer = (uint8_t *)malloc(fileSize + 1);
+  file.read(fileBuffer, fileSize);
+  fileBuffer[fileSize] = '\0';
+  webSocket.sendBIN(clientId, fileBuffer, fileSize);
+  file.close();
+  free(fileBuffer);
+}
+
+void fetchStorageInfo() {
+  storage = "";
+  fs::FS &fs = SD_MMC;
+  listDirectories(fs, "/");
+  storage = storage + "{\"total_space\" : \"" + String(SD_MMC.totalBytes()) + "\",\"used_space\" : \"" + String(SD_MMC.usedBytes()) + "\"}";
+  if (isConnected) {
+    if (screen_state == sd_storage) {
+      webSocket.sendTXT(clientId, storage);
+    }
+  }
+}
+
+void listDirectories(fs::FS &fs, String directory) {
+  File root = fs.open(directory);
+  if (!root) {
+    Serial.println("Failed to open root file");
+  }
+  if (!root.isDirectory()) {
+    Serial.println("Root file is not a directory");
+    return;
+  }
+  File file = root.openNextFile();
+  while (file) {
+    if (screen_state != sd_storage) {
+      break;
+    }
+    if (String(file.name()) == "") {
+      break;
+    }
+    if (file.isDirectory()) {
+      listDirectories(SD_MMC, "/" + String(file.name()));
+    } else {
+      storage = storage + "{\"file\" : \"" + String(file.path()) + "\" ,\"size\" : \"" + String(file.size()) + "\"}|";
+    }
+    file = root.openNextFile();
+  }
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
   webSocket.loop();
-  if (isConnected && screen_state == live_stream) {
-    sendImage();
-    delay(100);
+  if (isConnected) {
+    if (screen_state == live_stream) {
+      sendImage();
+      delay(100);
+    }
   }
 }
